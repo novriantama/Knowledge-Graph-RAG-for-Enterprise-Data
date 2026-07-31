@@ -1,0 +1,8 @@
+Acme Corp (Form 10-K, Item 1 - Business)
+
+Acme Corp is a leading provider of enterprise cloud software, primarily delivering its flagship product, AcmeCloud.
+Acme Corp relies heavily on technology frameworks including FastAPI and Pydantic for high-performance API endpoints.
+FastAPI and Pydantic depend on underlying open-source data validation libraries maintained by Supplier X.
+
+Acme Corp operates a major European subsidiary named Acme EU GmbH located in Berlin, Germany.
+Acme EU GmbH complies with European Union Cyber Resilience Regulations (EU CRA) through cloud infrastructure certified under ISO 27001 provided by AWS Germany.

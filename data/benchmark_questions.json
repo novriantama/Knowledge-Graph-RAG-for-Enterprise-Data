@@ -1,0 +1,20 @@
+[
+  {
+    "id": "q1",
+    "question": "What is the primary product offered by Acme Corp?",
+    "hop_count": 1,
+    "expected_answer_keywords": ["AcmeCloud", "SaaS"]
+  },
+  {
+    "id": "q2",
+    "question": "Which technology frameworks used by Acme Corp depend on open-source packages maintained by Supplier X?",
+    "hop_count": 2,
+    "expected_answer_keywords": ["FastAPI", "Pydantic"]
+  },
+  {
+    "id": "q3",
+    "question": "Are any direct subsidiaries of Acme Corp compliant with European Union Cyber Resilience Regulations through their cloud vendors?",
+    "hop_count": 3,
+    "expected_answer_keywords": ["Acme EU GmbH", "ISO 27001", "EU CRA"]
+  }
+]

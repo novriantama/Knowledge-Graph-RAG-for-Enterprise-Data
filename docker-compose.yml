@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  neo4j:
+    image: neo4j:5.18.0-community
+    container_name: kg_rag_neo4j
+    ports:
+      - "7474:7474" # HTTP Web Console
+      - "7687:7687" # Bolt protocol
+    environment:
+      - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-password123}
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+    volumes:
+      - neo4j_data:/data
+
+  pgvector:
+    image: pgvector/pgvector:pg16
+    container_name: kg_rag_pgvector
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-rag_db}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+
+volumes:
+  neo4j_data:
+  pgvector_data:
