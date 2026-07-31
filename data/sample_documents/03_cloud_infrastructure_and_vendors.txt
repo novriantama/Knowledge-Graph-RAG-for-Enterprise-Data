@@ -1,0 +1,16 @@
+Cloud Infrastructure & Third-Party Vendors - Acme Global Systems
+
+1. Cloud Infrastructure Providers & Regions
+- Acme Cloud Platform is hosted on Amazon Web Services (AWS) in the AWS us-east-1 (N. Virginia) and AWS eu-central-1 (Frankfurt) regions.
+- User Auth Service (Service-102) and Redis Cluster operate inside AWS EKS Cluster Alpha (Kubernetes v1.28) located in AWS us-east-1.
+- Analytics Processor Service (Service-103) operates inside AWS EKS Cluster Beta located in AWS eu-central-1.
+
+2. European Subsidiary & Infrastructure Operations
+- Acme EU GmbH is a direct corporate subsidiary of Acme Global Systems, based in Berlin, Germany.
+- Acme EU GmbH OWNS and manages all infrastructure operating inside AWS eu-central-1, including EKS Cluster Beta and PostgreSQL Database.
+
+3. Third-Party SaaS Vendors & Integration Partners
+- User Auth Service (Service-102) PARTNERED_WITH Auth0 (Okta) for emergency identity federation fallback.
+- API Gateway Service (Service-101) PARTNERED_WITH Cloudflare for DDoS mitigation and WAF defense.
+- Payment & Billing Service (Service-104) PARTNERED_WITH Stripe for credit card payment gateway processing.
+- All microservices integrate Datadog Agent (v7.50) for application performance monitoring (APM).

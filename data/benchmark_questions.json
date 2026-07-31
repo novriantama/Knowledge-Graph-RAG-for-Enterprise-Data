@@ -1,20 +1,62 @@
 [
   {
     "id": "q1",
-    "question": "What is the primary product offered by Acme Corp?",
+    "question": "What is the primary cloud web framework used by User Auth Service (Service-102)?",
     "hop_count": 1,
-    "expected_answer_keywords": ["AcmeCloud", "SaaS"]
+    "expected_answer_keywords": ["FastAPI", "Python"]
   },
   {
     "id": "q2",
-    "question": "Which technology frameworks used by Acme Corp depend on open-source packages maintained by Supplier X?",
-    "hop_count": 2,
-    "expected_answer_keywords": ["FastAPI", "Pydantic"]
+    "question": "Which database engine is used by Analytics Processor Service (Service-103) for storing vectors?",
+    "hop_count": 1,
+    "expected_answer_keywords": ["PostgreSQL", "pgvector"]
   },
   {
     "id": "q3",
-    "question": "Are any direct subsidiaries of Acme Corp compliant with European Union Cyber Resilience Regulations through their cloud vendors?",
+    "question": "Which third-party payment gateway is integrated with Payment & Billing Service (Service-104)?",
+    "hop_count": 1,
+    "expected_answer_keywords": ["Stripe"]
+  },
+  {
+    "id": "q4",
+    "question": "Which open-source libraries used by User Auth Service depend on packages maintained by Supplier-X?",
+    "hop_count": 2,
+    "expected_answer_keywords": ["FastAPI", "Starlette", "AnyIO", "Supplier-X"]
+  },
+  {
+    "id": "q5",
+    "question": "Which European subsidiary owns the infrastructure operating inside AWS eu-central-1?",
+    "hop_count": 2,
+    "expected_answer_keywords": ["Acme EU GmbH", "Berlin"]
+  },
+  {
+    "id": "q6",
+    "question": "What cloud Kubernetes cluster hosts the User Auth Service and Redis Cluster?",
+    "hop_count": 2,
+    "expected_answer_keywords": ["AWS EKS Cluster Alpha", "us-east-1"]
+  },
+  {
+    "id": "q7",
+    "question": "Which open-source maintainers' software packages directly impact EU Cyber Resilience Act (EU CRA) compliance for Acme EU GmbH?",
     "hop_count": 3,
-    "expected_answer_keywords": ["Acme EU GmbH", "ISO 27001", "EU CRA"]
+    "expected_answer_keywords": ["Supplier-X", "AnyIO", "pydantic-core", "EU CRA"]
+  },
+  {
+    "id": "q8",
+    "question": "How does API Gateway Service (Service-101) transitively depend on Stripe payment processing?",
+    "hop_count": 3,
+    "expected_answer_keywords": ["Analytics Processor Service", "Payment & Billing Service", "Stripe"]
+  },
+  {
+    "id": "q9",
+    "question": "What security compliance frameworks apply to Acme EU GmbH through AWS Germany cloud infrastructure?",
+    "hop_count": 3,
+    "expected_answer_keywords": ["GDPR", "EU CRA", "ISO 27001"]
+  },
+  {
+    "id": "q10",
+    "question": "What is the quantum encryption protocol used by Acme Identity Manager?",
+    "hop_count": 0,
+    "expected_answer_keywords": ["not mentioned", "unknown", "no information"]
   }
 ]

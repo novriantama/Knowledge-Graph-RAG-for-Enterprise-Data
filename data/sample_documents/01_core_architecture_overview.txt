@@ -1,0 +1,19 @@
+Enterprise Software Architecture Overview - Acme Global Systems
+
+1. Overview & Core Products
+Acme Global Systems operates three primary commercial software products:
+- AcmeCloud Platform: Enterprise SaaS platform for workflow automation and data processing.
+- Acme Data Pipeline: Real-time event streaming and analytical processing engine.
+- Acme Identity Manager: Centralized identity provider (IdP) managing single sign-on (SSO) and role-based access control (RBAC).
+
+2. Primary Microservices
+The core architecture consists of four interconnected microservices:
+- API Gateway Service (Service-101): Entry point for external API traffic, managed by the Core Platform Team.
+- User Auth Service (Service-102): Handles authentication requests, managed by the Security Infrastructure Team.
+- Analytics Processor Service (Service-103): Computes real-time data metrics, managed by the Data Engineering Team.
+- Payment & Billing Service (Service-104): Handles customer subscriptions and payment processing, managed by the Finance Tech Team.
+
+3. Inter-Service Communication
+- API Gateway Service (Service-101) DEPENDS_ON User Auth Service (Service-102) for token validation.
+- API Gateway Service (Service-101) DEPENDS_ON Analytics Processor Service (Service-103) for request telemetry routing.
+- Analytics Processor Service (Service-103) DEPENDS_ON Payment & Billing Service (Service-104) to verify account tier entitlement before executing heavy processing jobs.

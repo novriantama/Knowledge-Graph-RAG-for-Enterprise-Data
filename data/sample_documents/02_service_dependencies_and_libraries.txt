@@ -1,0 +1,19 @@
+Software Library & Component Dependencies - Acme Global Systems
+
+1. Open-Source Frameworks & Libraries
+- User Auth Service (Service-102) USES_TECH FastAPI (Python web framework) for API endpoints.
+- User Auth Service (Service-102) USES_TECH PyJWT for JSON Web Token generation and cryptographic signing.
+- Analytics Processor Service (Service-103) USES_TECH PyTorch (v2.2.0) for machine learning model inference.
+- Analytics Processor Service (Service-103) USES_TECH Apache Kafka (v3.6.0) for high-throughput event streaming.
+- Payment & Billing Service (Service-104) USES_TECH Pydantic (v2.6.0) for data validation.
+
+2. Upstream Open-Source Package Suppliers & Maintainers
+- FastAPI DEPENDS_ON Starlette (ASGI framework).
+- Starlette DEPENDS_ON AnyIO (asynchronous I/O library maintained by OpenSource Collective maintainer Supplier-X).
+- Pydantic DEPENDS_ON pydantic-core (Rust extension module maintained by OpenSource Collective maintainer Supplier-X).
+- Apache Kafka DEPENDS_ON Java OpenJDK 17 maintained by Eclipse Foundation vendor Supplier-Y.
+
+3. Database & Storage Infrastructure
+- User Auth Service (Service-102) DEPENDS_ON Redis Cluster (v7.2) for distributed token caching.
+- Analytics Processor Service (Service-103) DEPENDS_ON PostgreSQL Database (v16.0 with pgvector) for vector storage.
+- Payment & Billing Service (Service-104) DEPENDS_ON Encrypted Aurora MySQL (v8.0) for transaction ledger storage.
