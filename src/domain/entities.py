@@ -3,15 +3,20 @@ from pydantic import BaseModel, Field
 from src.domain.enums import EntityType, RelationType, RouteChoice
 
 class ExtractedEntity(BaseModel):
-    name: str = Field(description="Entity name as extracted from text")
-    entity_type: EntityType = Field(description="Category of the entity")
-    aliases: List[str] = Field(default_factory=list, description="Alternative names or acronyms")
+    canonical_name: str = Field(description="Canonical entity name (e.g. 'Acme Corp')")
+    entity_type: EntityType = Field(description="Category of the entity from EntityType enum")
+    aliases: List[str] = Field(default_factory=list, description="Alternative names, acronyms, or variants")
+
+    @property
+    def name(self) -> str:
+        return self.canonical_name
 
 class ExtractedRelationship(BaseModel):
-    source_entity: str = Field(description="Source entity name")
-    target_entity: str = Field(description="Target entity name")
-    relation_type: RelationType = Field(description="Type of relationship")
-    confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Extraction confidence score")
+    source_entity: str = Field(description="Canonical source entity name")
+    target_entity: str = Field(description="Canonical target entity name")
+    relation_type: RelationType = Field(description="Strict relationship type from RelationType enum")
+    source_chunk_id: str = Field(description="ID of the chunk that justifies this relationship")
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Extraction confidence score between 0.0 and 1.0")
 
 class ChunkExtractionResult(BaseModel):
     chunk_id: str
