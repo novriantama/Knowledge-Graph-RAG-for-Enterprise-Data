@@ -34,8 +34,10 @@ class DocumentChunk(BaseModel):
 
 class RouterDecision(BaseModel):
     route: RouteChoice
-    reasoning: str
-    target_entities: List[str] = Field(default_factory=list)
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Routing classification confidence score between 0.0 and 1.0")
+    reasoning: str = Field(description="Brief explanation of routing decision")
+    target_entities: List[str] = Field(default_factory=list, description="Entities mentioned in the query for graph parameterization")
+    is_fallback: bool = Field(default=False, description="True if low confidence fallback triggered HYBRID mode")
 
 class GroundedAnswer(BaseModel):
     question: str
