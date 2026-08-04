@@ -20,6 +20,12 @@ class CypherTemplateLibrary:
             MATCH (e:Entity {id: $entity_id})-[r]->(target:Entity)
             RETURN e.id AS source, type(r) AS relation, target.id AS target, r.source_chunk_ids AS chunks
             LIMIT $limit
+        """,
+        "neighborhood_by_chunk_ids": """
+            MATCH (src:Entity)-[r]->(tgt:Entity)
+            WHERE ANY(cid IN $chunk_ids WHERE cid IN r.source_chunk_ids)
+            RETURN src.id AS source, type(r) AS relation, tgt.id AS target, r.source_chunk_ids AS chunks
+            LIMIT $limit
         """
     }
 

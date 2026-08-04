@@ -15,12 +15,7 @@ class Neo4jRepository(IGraphRepository):
             self.driver.close()
 
     def save_chunk_extractions(self, result: ChunkExtractionResult, resolver: IEntityResolverService) -> None:
-        """Idempotently writes extracted entities and relationships using MERGE statements.
-        
-        Every node write uses MERGE on entity ID (canonical name).
-        Every edge write uses MERGE between source and target nodes and appends the source_chunk_id
-        to an array property on the edge for citation justification.
-        """
+        """Idempotently writes extracted entities and relationships using MERGE statements."""
         with self.driver.session() as session:
             # 1. Idempotent Node Ingestion via MERGE
             for entity in result.entities:
@@ -85,3 +80,12 @@ class Neo4jRepository(IGraphRepository):
         with self.driver.session() as session:
             result = session.run(query, **params)
             return [record.data() for record in result]
+
+    def get_neighborhood_by_chunk_ids(self, chunk_ids: List[str]) -> List[Dict[str, Any]]:
+        """Cross-retrieval: Fetches graph triples connected to specified chunk IDs."""
+        if not chunk_ids:
+            return []
+        return self.execute_cypher_template(
+            template_name="neighborhood_by_chunk_ids",
+            params={"chunk_ids": chunk_ids, "limit": 20}
+        )

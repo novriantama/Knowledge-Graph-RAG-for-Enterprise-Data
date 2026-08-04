@@ -35,6 +35,11 @@ class IGraphRepository(ABC):
         """Executes a pre-defined parameterized Cypher template query."""
         pass
 
+    @abstractmethod
+    def get_neighborhood_by_chunk_ids(self, chunk_ids: List[str]) -> List[Dict[str, Any]]:
+        """Cross-retrieval: Fetches graph triples connected to specified chunk IDs."""
+        pass
+
 class IVectorRepository(ABC):
     @abstractmethod
     def save_chunk(self, chunk: DocumentChunk) -> None:
@@ -44,6 +49,11 @@ class IVectorRepository(ABC):
     @abstractmethod
     def similarity_search(self, query_embedding: List[float], top_k: int = 5) -> List[DocumentChunk]:
         """Performs vector similarity search."""
+        pass
+
+    @abstractmethod
+    def get_chunks_by_ids(self, chunk_ids: List[str]) -> List[DocumentChunk]:
+        """Cross-retrieval: Fetches text passage chunks directly by chunk IDs."""
         pass
 
 class IRouterService(ABC):

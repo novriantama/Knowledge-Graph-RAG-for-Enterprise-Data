@@ -7,7 +7,7 @@ from src.domain.entities import DocumentChunk
 from src.domain.interfaces import IVectorRepository
 
 class PgVectorRepository(IVectorRepository):
-    """pgvector Repository storing chunks with full metadata (document_id, section_path, created_at date, entity_ids)."""
+    """pgvector Repository storing chunks with full metadata and bi-directional chunk_id lookup."""
 
     def __init__(self, dbname: str = "rag_db", user: str = "postgres", password: str = "postgres", host: str = "localhost", port: int = 5432):
         self.conn_params = {
@@ -77,6 +77,33 @@ class PgVectorRepository(IVectorRepository):
                     ORDER BY embedding <=> %s::vector
                     LIMIT %s;
                 """, (query_embedding, query_embedding, top_k))
+                rows = cur.fetchall()
+
+                return [
+                    DocumentChunk(
+                        chunk_id=r[0],
+                        document_id=r[1],
+                        section_path=r[2],
+                        created_at=r[3],
+                        content=r[4],
+                        entity_ids=r[5] or [],
+                        embedding=None
+                    )
+                    for r in rows
+                ]
+
+    def get_chunks_by_ids(self, chunk_ids: List[str]) -> List[DocumentChunk]:
+        """Cross-retrieval: Fetches raw text passage chunks directly by chunk_id array."""
+        if not chunk_ids:
+            return []
+
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT chunk_id, document_id, section_path, created_at, content, entity_ids
+                    FROM document_chunks
+                    WHERE chunk_id = ANY(%s);
+                """, (chunk_ids,))
                 rows = cur.fetchall()
 
                 return [
