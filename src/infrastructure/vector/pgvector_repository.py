@@ -7,7 +7,7 @@ from src.domain.entities import DocumentChunk
 from src.domain.interfaces import IVectorRepository
 
 class PgVectorRepository(IVectorRepository):
-    """pgvector Repository storing chunks with full metadata and bi-directional chunk_id lookup."""
+    """pgvector Repository storing chunks with full metadata, HNSW indexing, and ef_search tuning."""
 
     def __init__(self, dbname: str = "rag_db", user: str = "postgres", password: str = "postgres", host: str = "localhost", port: int = 5432):
         self.conn_params = {
@@ -46,6 +46,12 @@ class PgVectorRepository(IVectorRepository):
                     ON document_chunks USING hnsw (embedding vector_cosine_ops)
                     WITH (m = 16, ef_construction = 64);
                 """)
+
+    def set_ef_search(self, ef_search: int = 40) -> None:
+        """Sets the HNSW ef_search query-time parameter for performance/recall tuning."""
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"SET hnsw.ef_search = {int(ef_search)};")
 
     def save_chunk(self, chunk: DocumentChunk) -> None:
         embedding = chunk.embedding
