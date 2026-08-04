@@ -1,3 +1,4 @@
+import datetime
 import psycopg2
 from pgvector.psycopg2 import register_vector
 from sentence_transformers import SentenceTransformer
@@ -6,6 +7,8 @@ from src.domain.entities import DocumentChunk
 from src.domain.interfaces import IVectorRepository
 
 class PgVectorRepository(IVectorRepository):
+    """pgvector Repository storing chunks with full metadata (document_id, section_path, created_at date, entity_ids)."""
+
     def __init__(self, dbname: str = "rag_db", user: str = "postgres", password: str = "postgres", host: str = "localhost", port: int = 5432):
         self.conn_params = {
             "dbname": dbname,
@@ -32,6 +35,7 @@ class PgVectorRepository(IVectorRepository):
                         chunk_id VARCHAR(128) PRIMARY KEY,
                         document_id VARCHAR(128) NOT NULL,
                         section_path TEXT,
+                        created_at VARCHAR(64),
                         content TEXT NOT NULL,
                         entity_ids TEXT[],
                         embedding vector(384)
@@ -48,22 +52,26 @@ class PgVectorRepository(IVectorRepository):
         if embedding is None:
             embedding = self.encoder.encode(chunk.content).tolist()
 
+        created_at = chunk.created_at or datetime.datetime.utcnow().isoformat()
+
         with self._get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    INSERT INTO document_chunks (chunk_id, document_id, section_path, content, entity_ids, embedding)
-                    VALUES (%s, %s, %s, %s, %s, %s)
+                    INSERT INTO document_chunks (chunk_id, document_id, section_path, created_at, content, entity_ids, embedding)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (chunk_id) DO UPDATE SET
+                        section_path = EXCLUDED.section_path,
+                        created_at = EXCLUDED.created_at,
                         content = EXCLUDED.content,
                         entity_ids = EXCLUDED.entity_ids,
                         embedding = EXCLUDED.embedding;
-                """, (chunk.chunk_id, chunk.document_id, chunk.section_path, chunk.content, chunk.entity_ids, embedding))
+                """, (chunk.chunk_id, chunk.document_id, chunk.section_path, created_at, chunk.content, chunk.entity_ids, embedding))
 
     def similarity_search(self, query_embedding: List[float], top_k: int = 5) -> List[DocumentChunk]:
         with self._get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT chunk_id, document_id, section_path, content, entity_ids,
+                    SELECT chunk_id, document_id, section_path, created_at, content, entity_ids,
                            1 - (embedding <=> %s::vector) AS similarity
                     FROM document_chunks
                     ORDER BY embedding <=> %s::vector
@@ -76,8 +84,9 @@ class PgVectorRepository(IVectorRepository):
                         chunk_id=r[0],
                         document_id=r[1],
                         section_path=r[2],
-                        content=r[3],
-                        entity_ids=r[4] or [],
+                        created_at=r[3],
+                        content=r[4],
+                        entity_ids=r[5] or [],
                         embedding=None
                     )
                     for r in rows

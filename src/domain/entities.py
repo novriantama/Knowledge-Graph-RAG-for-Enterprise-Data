@@ -27,8 +27,9 @@ class DocumentChunk(BaseModel):
     chunk_id: str
     document_id: str
     section_path: Optional[str] = None
+    created_at: Optional[str] = Field(default=None, description="ISO timestamp / date of the document chunk")
     content: str
-    entity_ids: List[str] = Field(default_factory=list)
+    entity_ids: List[str] = Field(default_factory=list, description="Canonical entity IDs mentioned in this chunk")
     embedding: Optional[List[float]] = None
 
 class RouterDecision(BaseModel):
