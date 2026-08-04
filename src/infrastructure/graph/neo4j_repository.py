@@ -5,6 +5,8 @@ from src.domain.interfaces import IGraphRepository, IEntityResolverService
 from src.infrastructure.graph.cypher_templates import CypherTemplateLibrary
 
 class Neo4jRepository(IGraphRepository):
+    """Idempotent Neo4j Graph Database Repository using MERGE and source chunk ID provenance tracking."""
+
     def __init__(self, uri: str, user: str, pass_word: str):
         self.driver: Driver = GraphDatabase.driver(uri, auth=(user, pass_word))
 
@@ -13,33 +15,41 @@ class Neo4jRepository(IGraphRepository):
             self.driver.close()
 
     def save_chunk_extractions(self, result: ChunkExtractionResult, resolver: IEntityResolverService) -> None:
+        """Idempotently writes extracted entities and relationships using MERGE statements.
+        
+        Every node write uses MERGE on entity ID (canonical name).
+        Every edge write uses MERGE between source and target nodes and appends the source_chunk_id
+        to an array property on the edge for citation justification.
+        """
         with self.driver.session() as session:
-            # 1. Merge Entities
+            # 1. Idempotent Node Ingestion via MERGE
             for entity in result.entities:
-                canonical_name = resolver.resolve(entity.name)
+                canonical_name = resolver.resolve(entity.canonical_name)
                 aliases = resolver.get_aliases(canonical_name)
+                entity_type_val = entity.entity_type.value if hasattr(entity.entity_type, 'value') else str(entity.entity_type)
                 
-                query = """
+                node_query = """
                 MERGE (e:Entity {id: $canonical_name})
                 ON CREATE SET 
                     e.name = $canonical_name,
                     e.type = $entity_type,
                     e.aliases = $aliases
                 ON MATCH SET 
-                    e.aliases = apoc.coll.toSet(e.aliases + $aliases)
+                    e.aliases = [x IN (e.aliases + $aliases) WHERE x IS NOT NULL | x]
                 """
                 session.run(
-                    query,
+                    node_query,
                     canonical_name=canonical_name,
-                    entity_type=entity.entity_type.value if hasattr(entity.entity_type, 'value') else entity.entity_type,
+                    entity_type=entity_type_val,
                     aliases=aliases
                 )
 
-            # 2. Merge Relationships with source_chunk_id tracking
+            # 2. Idempotent Relationship Ingestion via MERGE with source_chunk_id tracking
             for rel in result.relationships:
                 src_canonical = resolver.resolve(rel.source_entity)
                 tgt_canonical = resolver.resolve(rel.target_entity)
-                rel_type = rel.relation_type.value if hasattr(rel.relation_type, 'value') else rel.relation_type
+                rel_type = rel.relation_type.value if hasattr(rel.relation_type, 'value') else str(rel.relation_type)
+                chunk_id = rel.source_chunk_id or result.chunk_id
 
                 rel_query = f"""
                 MATCH (src:Entity {{id: $src_id}})
@@ -49,13 +59,21 @@ class Neo4jRepository(IGraphRepository):
                     r.source_chunk_ids = [$chunk_id],
                     r.confidence = $confidence
                 ON MATCH SET 
-                    r.source_chunk_ids = apoc.coll.toSet(r.source_chunk_ids + $chunk_id)
+                    r.source_chunk_ids = CASE 
+                        WHEN r.source_chunk_ids IS NULL THEN [$chunk_id]
+                        WHEN $chunk_id IN r.source_chunk_ids THEN r.source_chunk_ids
+                        ELSE r.source_chunk_ids + $chunk_id
+                    END,
+                    r.confidence = CASE 
+                        WHEN $confidence > r.confidence THEN $confidence 
+                        ELSE r.confidence 
+                    END
                 """
                 session.run(
                     rel_query,
                     src_id=src_canonical,
                     tgt_id=tgt_canonical,
-                    chunk_id=result.chunk_id,
+                    chunk_id=chunk_id,
                     confidence=rel.confidence
                 )
 
