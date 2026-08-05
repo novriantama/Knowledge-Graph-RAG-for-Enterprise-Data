@@ -1,62 +1,356 @@
 [
   {
-    "id": "q1",
-    "question": "What is the primary cloud web framework used by User Auth Service (Service-102)?",
+    "id": "q01",
+    "question": "What is the primary web framework used by User Auth Service (Service-102)?",
     "hop_count": 1,
+    "category": "single_hop",
     "expected_answer_keywords": ["FastAPI", "Python"]
   },
   {
-    "id": "q2",
-    "question": "Which database engine is used by Analytics Processor Service (Service-103) for storing vectors?",
+    "id": "q02",
+    "question": "Which database engine is used by Analytics Processor Service (Service-103) for storing embeddings?",
     "hop_count": 1,
+    "category": "single_hop",
     "expected_answer_keywords": ["PostgreSQL", "pgvector"]
   },
   {
-    "id": "q3",
+    "id": "q03",
     "question": "Which third-party payment gateway is integrated with Payment & Billing Service (Service-104)?",
     "hop_count": 1,
+    "category": "single_hop",
     "expected_answer_keywords": ["Stripe"]
   },
   {
-    "id": "q4",
-    "question": "Which open-source libraries used by User Auth Service depend on packages maintained by Supplier-X?",
-    "hop_count": 2,
-    "expected_answer_keywords": ["FastAPI", "Starlette", "AnyIO", "Supplier-X"]
+    "id": "q04",
+    "question": "Where is the European subsidiary Acme EU GmbH located?",
+    "hop_count": 1,
+    "category": "single_hop",
+    "expected_answer_keywords": ["Berlin", "Germany"]
   },
   {
-    "id": "q5",
-    "question": "Which European subsidiary owns the infrastructure operating inside AWS eu-central-1?",
-    "hop_count": 2,
-    "expected_answer_keywords": ["Acme EU GmbH", "Berlin"]
+    "id": "q05",
+    "question": "What is the emergency hotfix SLA policy for critical vulnerabilities in Supplier-X advisories?",
+    "hop_count": 1,
+    "category": "single_hop",
+    "expected_answer_keywords": ["24-hour", "patch"]
   },
   {
-    "id": "q6",
-    "question": "What cloud Kubernetes cluster hosts the User Auth Service and Redis Cluster?",
-    "hop_count": 2,
-    "expected_answer_keywords": ["AWS EKS Cluster Alpha", "us-east-1"]
+    "id": "q06",
+    "question": "Which cloud vendor hosts the GCP us-east4 analytics infrastructure?",
+    "hop_count": 1,
+    "category": "single_hop",
+    "expected_answer_keywords": ["Google Cloud", "GCP"]
   },
   {
-    "id": "q7",
-    "question": "Which open-source maintainers' software packages directly impact EU Cyber Resilience Act (EU CRA) compliance for Acme EU GmbH?",
-    "hop_count": 3,
-    "expected_answer_keywords": ["Supplier-X", "AnyIO", "pydantic-core", "EU CRA"]
+    "id": "q07",
+    "question": "What internal team owns and maintains the API Gateway Service (Service-101)?",
+    "hop_count": 1,
+    "category": "single_hop",
+    "expected_answer_keywords": ["Core Platform Team"]
   },
   {
-    "id": "q8",
-    "question": "How does API Gateway Service (Service-101) transitively depend on Stripe payment processing?",
-    "hop_count": 3,
-    "expected_answer_keywords": ["Analytics Processor Service", "Payment & Billing Service", "Stripe"]
+    "id": "q08",
+    "question": "What database cache is used by User Auth Service (Service-102) for session storage?",
+    "hop_count": 1,
+    "category": "single_hop",
+    "expected_answer_keywords": ["Redis Cluster"]
   },
   {
-    "id": "q9",
-    "question": "What security compliance frameworks apply to Acme EU GmbH through AWS Germany cloud infrastructure?",
-    "hop_count": 3,
-    "expected_answer_keywords": ["GDPR", "EU CRA", "ISO 27001"]
+    "id": "q09",
+    "question": "What compliance framework requires annual third-party audits for payment data?",
+    "hop_count": 1,
+    "category": "single_hop",
+    "expected_answer_keywords": ["PCI-DSS", "audit"]
   },
   {
     "id": "q10",
-    "question": "What is the quantum encryption protocol used by Acme Identity Manager?",
-    "hop_count": 0,
+    "question": "What observability tool is used for cloud infrastructure monitoring?",
+    "hop_count": 1,
+    "category": "single_hop",
+    "expected_answer_keywords": ["Datadog"]
+  },
+
+  {
+    "id": "q11",
+    "question": "Which open-source libraries used by User Auth Service depend on packages maintained by Supplier-X?",
+    "hop_count": 2,
+    "category": "two_hop",
+    "expected_answer_keywords": ["FastAPI", "Starlette", "AnyIO", "Supplier-X"]
+  },
+  {
+    "id": "q12",
+    "question": "Which subsidiary owns the cloud infrastructure operating inside AWS eu-central-1?",
+    "hop_count": 2,
+    "category": "two_hop",
+    "expected_answer_keywords": ["Acme EU GmbH"]
+  },
+  {
+    "id": "q13",
+    "question": "What cloud Kubernetes cluster hosts both User Auth Service and Redis Cluster?",
+    "hop_count": 2,
+    "category": "two_hop",
+    "expected_answer_keywords": ["AWS EKS Cluster Alpha"]
+  },
+  {
+    "id": "q14",
+    "question": "Which underlying sub-dependency library of FastAPI is maintained by Supplier-X?",
+    "hop_count": 2,
+    "category": "two_hop",
+    "expected_answer_keywords": ["Starlette", "AnyIO", "Supplier-X"]
+  },
+  {
+    "id": "q15",
+    "question": "What data warehouse partner is integrated with Google Cloud BigQuery for analytics processing?",
+    "hop_count": 2,
+    "category": "two_hop",
+    "expected_answer_keywords": ["Snowflake"]
+  },
+  {
+    "id": "q16",
+    "question": "Which regulations apply to data stored inside AWS eu-central-1 in Germany?",
+    "hop_count": 2,
+    "category": "two_hop",
+    "expected_answer_keywords": ["GDPR", "EU CRA"]
+  },
+  {
+    "id": "q17",
+    "question": "What technology framework connects Service-102 to Service-103 for token validation?",
+    "hop_count": 2,
+    "category": "two_hop",
+    "expected_answer_keywords": ["gRPC", "FastAPI"]
+  },
+  {
+    "id": "q18",
+    "question": "Which cloud vendor provides the infrastructure hosting Payment & Billing Service?",
+    "hop_count": 2,
+    "category": "two_hop",
+    "expected_answer_keywords": ["AWS", "Amazon Web Services"]
+  },
+  {
+    "id": "q19",
+    "question": "What open-source maintainer organization releases updates for Pydantic v2 core binary extensions?",
+    "hop_count": 2,
+    "category": "two_hop",
+    "expected_answer_keywords": ["OpenSource Guild", "pydantic-core"]
+  },
+  {
+    "id": "q20",
+    "question": "Which security standard covers data privacy for customer records in EU Cloud regions?",
+    "hop_count": 2,
+    "category": "two_hop",
+    "expected_answer_keywords": ["GDPR", "ISO 27001"]
+  },
+
+  {
+    "id": "q21",
+    "question": "Which open-source maintainers' packages directly impact EU Cyber Resilience Act (EU CRA) compliance for Acme EU GmbH?",
+    "hop_count": 3,
+    "category": "three_hop",
+    "expected_answer_keywords": ["Supplier-X", "AnyIO", "EU CRA", "Acme EU GmbH"]
+  },
+  {
+    "id": "q22",
+    "question": "How does API Gateway Service (Service-101) transitively depend on Stripe payment processing?",
+    "hop_count": 3,
+    "category": "three_hop",
+    "expected_answer_keywords": ["Analytics Processor Service", "Payment & Billing Service", "Stripe"]
+  },
+  {
+    "id": "q23",
+    "question": "What security compliance frameworks apply to Acme EU GmbH through AWS Germany cloud infrastructure?",
+    "hop_count": 3,
+    "category": "three_hop",
+    "expected_answer_keywords": ["GDPR", "EU CRA", "ISO 27001"]
+  },
+  {
+    "id": "q24",
+    "question": "How does a vulnerability advisory in AnyIO cascade to affect API Gateway Service?",
+    "hop_count": 3,
+    "category": "three_hop",
+    "expected_answer_keywords": ["AnyIO", "Starlette", "FastAPI", "User Auth Service", "API Gateway Service"]
+  },
+  {
+    "id": "q25",
+    "question": "What audit requirements link OpenSource Guild software packages to SOC 2 Type II compliance?",
+    "hop_count": 3,
+    "category": "three_hop",
+    "expected_answer_keywords": ["pydantic-core", "OpenSource Guild", "SOC 2 Type II"]
+  },
+  {
+    "id": "q26",
+    "question": "How does Payment & Billing Service rely on AWS EKS Cluster Alpha infrastructure and its underlying security compliance?",
+    "hop_count": 3,
+    "category": "three_hop",
+    "expected_answer_keywords": ["AWS EKS Cluster Alpha", "PCI-DSS", "ISO 27001"]
+  },
+  {
+    "id": "q27",
+    "question": "Which maintainers' libraries are transitively required by Analytics Processor Service for vector indexing?",
+    "hop_count": 3,
+    "category": "three_hop",
+    "expected_answer_keywords": ["pgvector", "OpenSource Guild", "pydantic-core"]
+  },
+  {
+    "id": "q28",
+    "question": "What regulatory obligations apply to open-source software supplied by Supplier-X under EU CRA regulations?",
+    "hop_count": 3,
+    "category": "three_hop",
+    "expected_answer_keywords": ["EU CRA", "Supplier-X", "SBOM", "vulnerability"]
+  },
+  {
+    "id": "q29",
+    "question": "Trace the path from Core Platform Team to Stripe third-party payment gateway.",
+    "hop_count": 3,
+    "category": "three_hop",
+    "expected_answer_keywords": ["Core Platform Team", "Service-101", "Service-104", "Stripe"]
+  },
+  {
+    "id": "q30",
+    "question": "How does a failure in AWS eu-central-1 impact compliance reporting for Acme EU GmbH?",
+    "hop_count": 3,
+    "category": "three_hop",
+    "expected_answer_keywords": ["Acme EU GmbH", "AWS eu-central-1", "GDPR", "EU CRA"]
+  },
+
+  {
+    "id": "q31",
+    "question": "Count how many microservices directly or indirectly depend on Redis Cluster.",
+    "hop_count": "aggregation",
+    "category": "aggregation",
+    "expected_answer_keywords": ["2", "User Auth Service", "Analytics Processor Service"]
+  },
+  {
+    "id": "q32",
+    "question": "List all microservices owned and operated by Acme Corp.",
+    "hop_count": "aggregation",
+    "category": "aggregation",
+    "expected_answer_keywords": ["Service-101", "Service-102", "Service-103", "Service-104"]
+  },
+  {
+    "id": "q33",
+    "question": "Compare the technology stack dependencies between User Auth Service and Analytics Processor Service.",
+    "hop_count": "aggregation",
+    "category": "aggregation",
+    "expected_answer_keywords": ["FastAPI", "Redis", "PostgreSQL", "pgvector"]
+  },
+  {
+    "id": "q34",
+    "question": "List all cloud vendors and third-party partners associated with Acme Corp infrastructure.",
+    "hop_count": "aggregation",
+    "category": "aggregation",
+    "expected_answer_keywords": ["AWS", "Google Cloud", "Datadog", "Snowflake", "Stripe"]
+  },
+  {
+    "id": "q35",
+    "question": "Count how many regulatory compliance frameworks apply to Acme EU GmbH operations.",
+    "hop_count": "aggregation",
+    "category": "aggregation",
+    "expected_answer_keywords": ["3", "EU CRA", "GDPR", "ISO 27001"]
+  },
+  {
+    "id": "q36",
+    "question": "List all software packages maintained by Supplier-X.",
+    "hop_count": "aggregation",
+    "category": "aggregation",
+    "expected_answer_keywords": ["AnyIO", "httpx-core"]
+  },
+  {
+    "id": "q37",
+    "question": "Compare the hosting infrastructure of Service-101 versus Service-103.",
+    "hop_count": "aggregation",
+    "category": "aggregation",
+    "expected_answer_keywords": ["AWS EKS Cluster Alpha", "GCP us-east4"]
+  },
+  {
+    "id": "q38",
+    "question": "List all database engines used across all microservices in the enterprise architecture.",
+    "hop_count": "aggregation",
+    "category": "aggregation",
+    "expected_answer_keywords": ["Redis Cluster", "PostgreSQL", "pgvector"]
+  },
+  {
+    "id": "q39",
+    "question": "Summarize all open-source maintainers identified in the software dependency chain.",
+    "hop_count": "aggregation",
+    "category": "aggregation",
+    "expected_answer_keywords": ["Supplier-X", "OpenSource Guild"]
+  },
+  {
+    "id": "q40",
+    "question": "Count total microservices operating under the Core Platform Team management.",
+    "hop_count": "aggregation",
+    "category": "aggregation",
+    "expected_answer_keywords": ["4", "Service-101", "Service-102", "Service-103", "Service-104"]
+  },
+
+  {
+    "id": "q41",
+    "question": "What quantum key distribution algorithm is used by Acme Identity Manager?",
+    "hop_count": "out_of_scope",
+    "category": "out_of_scope",
+    "expected_answer_keywords": ["not mentioned", "unknown", "no information"]
+  },
+  {
+    "id": "q42",
+    "question": "Who is the Chief Financial Officer of Acme Corp?",
+    "hop_count": "out_of_scope",
+    "category": "out_of_scope",
+    "expected_answer_keywords": ["not mentioned", "unknown", "no information"]
+  },
+  {
+    "id": "q43",
+    "question": "What is the stock price of Acme Corporation on Nasdaq?",
+    "hop_count": "out_of_scope",
+    "category": "out_of_scope",
+    "expected_answer_keywords": ["not mentioned", "unknown", "no information"]
+  },
+  {
+    "id": "q44",
+    "question": "Which programming language is used by Service-999 (Quantum Engine)?",
+    "hop_count": "out_of_scope",
+    "category": "out_of_scope",
+    "expected_answer_keywords": ["not mentioned", "unknown", "no information"]
+  },
+  {
+    "id": "q45",
+    "question": "What is the office street address of Acme Corp headquarters in Tokyo?",
+    "hop_count": "out_of_scope",
+    "category": "out_of_scope",
+    "expected_answer_keywords": ["not mentioned", "unknown", "no information"]
+  },
+  {
+    "id": "q46",
+    "question": "How many employees work in the marketing department of Acme EU GmbH?",
+    "hop_count": "out_of_scope",
+    "category": "out_of_scope",
+    "expected_answer_keywords": ["not mentioned", "unknown", "no information"]
+  },
+  {
+    "id": "q47",
+    "question": "What solar panel manufacturer supplies green energy to AWS us-east-1 data centers?",
+    "hop_count": "out_of_scope",
+    "category": "out_of_scope",
+    "expected_answer_keywords": ["not mentioned", "unknown", "no information"]
+  },
+  {
+    "id": "q48",
+    "question": "What is the patent registration number for Supplier-X's proprietary AI chip?",
+    "hop_count": "out_of_scope",
+    "category": "out_of_scope",
+    "expected_answer_keywords": ["not mentioned", "unknown", "no information"]
+  },
+  {
+    "id": "q49",
+    "question": "Which Kubernetes version is running on Azure AKS Cluster Omega?",
+    "hop_count": "out_of_scope",
+    "category": "out_of_scope",
+    "expected_answer_keywords": ["not mentioned", "unknown", "no information"]
+  },
+  {
+    "id": "q50",
+    "question": "What is the dividend yield payout schedule for Acme Corp preference shares?",
+    "hop_count": "out_of_scope",
+    "category": "out_of_scope",
     "expected_answer_keywords": ["not mentioned", "unknown", "no information"]
   }
 ]
