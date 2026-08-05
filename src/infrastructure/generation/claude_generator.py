@@ -1,5 +1,5 @@
 import os
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple, Set
 from anthropic import Anthropic
 from pydantic import BaseModel, Field
 from src.domain.entities import GroundedAnswer, DocumentChunk
@@ -11,7 +11,7 @@ class _RawAnswerPayload(BaseModel):
     citations: List[str] = Field(description="List of chunk_ids explicitly cited to support the answer")
 
 class ClaudeGenerator(IGeneratorService):
-    """Generates grounded answers by converting raw Cypher paths into natural language statements and validating citations."""
+    """Generates grounded answers by deduplicating dual retrieval sources, converting Cypher paths to natural language, and enforcing citation verification."""
 
     RELATION_PHRASES: Dict[str, str] = {
         "OWNS": "owns and manages",
@@ -32,13 +32,14 @@ class ClaudeGenerator(IGeneratorService):
     def _phrase(self, rel_type: str) -> str:
         return self.RELATION_PHRASES.get(rel_type, rel_type.lower().replace("_", " "))
 
-    def serialize_graph_paths(self, paths: List[Dict[str, Any]]) -> str:
-        """Converts raw Cypher dictionary paths into natural, human-readable statements."""
+    def serialize_graph_paths(self, paths: List[Dict[str, Any]]) -> Tuple[str, Set[str]]:
+        """Converts raw Cypher dictionary paths into deduplicated natural language statements and extracts valid chunk IDs."""
         if not paths:
-            return ""
+            return "", set()
 
         statements = []
         seen_statements = set()
+        graph_chunk_ids = set()
 
         for p in paths:
             chunk_ids = set()
@@ -83,11 +84,46 @@ class ClaudeGenerator(IGeneratorService):
             else:
                 continue
 
+            graph_chunk_ids.update(chunk_ids)
+
             if stmt not in seen_statements:
                 seen_statements.add(stmt)
                 statements.append(stmt)
 
-        return "\n".join(statements)
+        return "\n".join(statements), graph_chunk_ids
+
+    def deduplicate_and_assemble_context(
+        self,
+        graph_paths: List[Dict[str, Any]],
+        vector_passages: List[DocumentChunk]
+    ) -> Tuple[str, Set[str]]:
+        """Deduplicates graph paths and vector passages, assembling context under explicit section labels."""
+        serialized_graph, graph_chunk_ids = self.serialize_graph_paths(graph_paths)
+
+        # Vector Passage Deduplication by chunk_id
+        seen_passage_ids = set()
+        formatted_passages = []
+        vector_chunk_ids = set()
+
+        for passage in vector_passages:
+            cid = passage.chunk_id
+            if cid in seen_passage_ids:
+                continue
+            seen_passage_ids.add(cid)
+            vector_chunk_ids.add(cid)
+
+            section_tag = f" Section: {passage.section_path}" if passage.section_path else ""
+            formatted_passages.append(f"--- Chunk ID: {cid}{section_tag} ---\n{passage.content}")
+
+        all_valid_chunk_ids = graph_chunk_ids.union(vector_chunk_ids)
+
+        context = f"""=== GRAPH DERIVED FACTS ===
+{serialized_graph if serialized_graph else 'None'}
+
+=== VECTOR TEXT PASSAGES ===
+{'\n\n'.join(formatted_passages) if formatted_passages else 'None'}"""
+
+        return context, all_valid_chunk_ids
 
     def generate_grounded_answer(
         self,
@@ -96,27 +132,11 @@ class ClaudeGenerator(IGeneratorService):
         vector_passages: List[DocumentChunk],
         route_choice: RouteChoice
     ) -> GroundedAnswer:
-        serialized_graph = self.serialize_graph_paths(graph_paths)
-
-        valid_chunk_ids = set()
-        formatted_passages = []
-        for passage in vector_passages:
-            cid = passage.chunk_id
-            valid_chunk_ids.add(cid)
-            formatted_passages.append(f"--- Chunk ID: {cid} ---\n{passage.content}")
-
-        for path in graph_paths:
-            for k in ["chunks1", "chunks2", "chunks_a", "chunks_b", "chunks"]:
-                if k in path and path[k]:
-                    valid_chunk_ids.update(path[k])
+        assembled_context, valid_chunk_ids = self.deduplicate_and_assemble_context(graph_paths, vector_passages)
 
         context_prompt = f"""You are a precise enterprise assistant. Answer the user question based ONLY on the provided Graph Derived Facts and Vector Text Passages.
 
-=== GRAPH DERIVED FACTS ===
-{serialized_graph if serialized_graph else 'None'}
-
-=== VECTOR TEXT PASSAGES ===
-{'\n\n'.join(formatted_passages) if formatted_passages else 'None'}
+{assembled_context}
 
 CRITICAL REQUIREMENT:
 You must provide citations for every claim. Include the matching chunk_id in your citations list.
