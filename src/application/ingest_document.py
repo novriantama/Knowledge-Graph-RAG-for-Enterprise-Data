@@ -31,7 +31,7 @@ class IngestDocumentUseCase:
         dates: Optional[List[str]] = None
     ) -> List[ChunkExtractionResult]:
         results = []
-        now_iso = datetime.datetime.utcnow().isoformat()
+        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
         for i, chunk_text in enumerate(text_chunks):
             chunk_id = f"{document_id}_chunk_{i}"

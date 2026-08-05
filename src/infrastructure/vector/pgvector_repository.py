@@ -58,7 +58,7 @@ class PgVectorRepository(IVectorRepository):
         if embedding is None:
             embedding = self.encoder.encode(chunk.content).tolist()
 
-        created_at = chunk.created_at or datetime.datetime.utcnow().isoformat()
+        created_at = chunk.created_at or datetime.datetime.now(datetime.timezone.utc).isoformat()
 
         with self._get_connection() as conn:
             with conn.cursor() as cur:

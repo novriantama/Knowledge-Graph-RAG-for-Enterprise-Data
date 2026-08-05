@@ -1,3 +1,4 @@
+import time
 import logging
 from typing import List, Dict, Any, Optional
 from sentence_transformers import SentenceTransformer
@@ -10,11 +11,12 @@ from src.domain.interfaces import (
     IGeneratorService,
     IEntityResolverService
 )
+from src.infrastructure.routing.routing_logger import RoutingLogger
 
 logger = logging.getLogger(__name__)
 
 class QueryPipelineUseCase:
-    """Orchestrates query execution using parameterized Cypher templates for secure, deterministic graph traversal."""
+    """Orchestrates query execution using parameterized Cypher templates and records persistent routing decision logs for Phase 5 benchmarking."""
 
     def __init__(
         self,
@@ -22,16 +24,20 @@ class QueryPipelineUseCase:
         graph_repo: IGraphRepository,
         vector_repo: IVectorRepository,
         generator: IGeneratorService,
-        resolver: IEntityResolverService
+        resolver: IEntityResolverService,
+        routing_logger: Optional[RoutingLogger] = None
     ):
         self.router = router
         self.graph_repo = graph_repo
         self.vector_repo = vector_repo
         self.generator = generator
         self.resolver = resolver
+        self.routing_logger = routing_logger or RoutingLogger()
         self.encoder = SentenceTransformer('all-MiniLM-L6-v2')
 
     def execute(self, query: str) -> GroundedAnswer:
+        start_time = time.time()
+
         # 1. Classify query intent & extract target entities via cheap Router
         decision = self.router.route_query(query)
         route_choice = decision.route
@@ -45,7 +51,6 @@ class QueryPipelineUseCase:
         if route_choice in (RouteChoice.GRAPH, RouteChoice.HYBRID):
             target_entities = decision.target_entities
 
-            # Case A: Two entities extracted -> Parameterized shared_dependencies query
             if len(target_entities) >= 2:
                 canon_a = self.resolver.resolve(target_entities[0])
                 canon_b = self.resolver.resolve(target_entities[1])
@@ -56,7 +61,6 @@ class QueryPipelineUseCase:
                 )
                 graph_paths.extend(paths)
 
-            # Case B: Single/Multiple individual entities -> Parameterized two_hop_neighborhood query
             if not graph_paths and target_entities:
                 for entity_name in target_entities:
                     canon_id = self.resolver.resolve(entity_name)
@@ -72,16 +76,34 @@ class QueryPipelineUseCase:
             query_embedding = self.encoder.encode(query).tolist()
             vector_passages = self.vector_repo.similarity_search(query_embedding, top_k=5)
 
-            # Cross-Retrieval: Retrieve graph neighborhood around retrieved vector passage chunks
             if route_choice == RouteChoice.HYBRID and vector_passages:
                 retrieved_chunk_ids = [v.chunk_id for v in vector_passages]
                 extra_graph_paths = self.graph_repo.get_neighborhood_by_chunk_ids(retrieved_chunk_ids)
                 graph_paths.extend(extra_graph_paths)
 
         # 4. Generate grounded answer with citation verification
-        return self.generator.generate_grounded_answer(
+        grounded_answer = self.generator.generate_grounded_answer(
             query=query,
             graph_paths=graph_paths,
             vector_passages=vector_passages,
             route_choice=route_choice
         )
+
+        latency_ms = (time.time() - start_time) * 1000
+
+        # 5. Persistently log routing decision and execution outcome for Phase 5
+        self.routing_logger.log_decision(
+            question=query,
+            route=route_choice.value if hasattr(route_choice, 'value') else str(route_choice),
+            confidence=decision.confidence,
+            is_fallback=decision.is_fallback,
+            target_entities=decision.target_entities,
+            reasoning=decision.reasoning,
+            graph_paths_count=len(graph_paths),
+            vector_passages_count=len(vector_passages),
+            retrieved_chunk_ids=grounded_answer.retrieved_chunk_ids,
+            citations=grounded_answer.citations,
+            latency_ms=latency_ms
+        )
+
+        return grounded_answer
