@@ -1,6 +1,6 @@
 # Knowledge Graph RAG for Enterprise Data
 
-### Stratified Benchmark Results (50-Item Portfolio Benchmark)
+### Portfolio Benchmark Artifact (50-Item Stratified Evaluation)
 
 | Query Complexity | Plain Vector RAG Acc | Hybrid KG-RAG Acc | Accuracy Delta | Vector Latency | KG-RAG Latency | Vector Cost / Query | Hybrid KG Cost / Query |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -10,12 +10,47 @@
 | **Aggregation / Grouping** | 20.0% | 90.0% | **+70.0%** | 0.95s | 1.65s | $0.0035 | $0.0058 |
 | **Out of Scope (Refusal)** | 10.0% | 100.0% | **+90.0%** | 0.80s | 0.95s | $0.0035 | $0.0058 |
 
-> **One-Time Graph Ingestion Cost**: ~$0.07 (Cached & Budget-Constrained)  
+> **One-Time Graph Ingestion Cost**: ~$0.07 (MD5 Cached & Budget-Constrained)  
 > **Key Finding**: Plain Vector RAG and Hybrid KG-RAG perform at parity on single-hop facts, but accuracy drops precipitously as multi-hop transitive dependency complexity increases. Hybrid KG-RAG maintains 90% accuracy across 2-hop and 3-hop queries through graph traversal and shared `chunk_id` cross-retrieval.
 
 ---
 
-A production-grade **Hybrid Knowledge Graph + Vector Retrieval-Augmented Generation (RAG)** engine built with **Clean Architecture**, **Neo4j**, **pgvector (PostgreSQL)**, **Claude API**, and **FastAPI**.
+## System Architecture
+
+```text
+                    ┌───────────────────────────┐
+                    │      User Query           │
+                    └─────────────┬─────────────┘
+                                  │
+                                  ▼
+                    ┌───────────────────────────┐
+                    │     Dynamic Router        │
+                    │   (Claude 3.5 Haiku)      │
+                    └──────┬─────────────┬──────┘
+                           │             │
+              ┌────────────┘             └────────────┐
+              ▼                                       ▼
+    ┌──────────────────┐                    ┌──────────────────┐
+    │  Vector Path     │                    │   Graph Path     │
+    │ (pgvector HNSW)  │                    │ (Neo4j Cypher)   │
+    └─────────┬────────┘                    └─────────┬────────┘
+              │                                       │
+              │   Passages                Paths       │
+              └────────────┐             ┌────────────┘
+                           ▼             ▼
+                    ┌───────────────────────────┐
+                    │      Context Fusion       │
+                    │ - Triple Serialization    │
+                    │ - Dual-Source Deduplication│
+                    └─────────────┬─────────────┘
+                                  │
+                                  ▼
+                    ┌───────────────────────────┐
+                    │   Grounded Generation     │
+                    │ - Strict Citation Check   │
+                    │ - Hallucination Retry Loop│
+                    └───────────────────────────┘
+```
 
 ---
 
