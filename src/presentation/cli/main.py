@@ -2,6 +2,7 @@ import sys
 import typer
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from src.presentation.api.router import api_router
 
 app = typer.Typer(help="Knowledge Graph RAG for Enterprise Data CLI")
@@ -10,6 +11,15 @@ app = typer.Typer(help="Knowledge Graph RAG for Enterprise Data CLI")
 def serve(host: str = "0.0.0.0", port: int = 8000):
     """Launch the FastAPI server."""
     server_app = FastAPI(title="Knowledge Graph RAG API", version="0.1.0")
+    
+    server_app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
     server_app.include_router(api_router)
     typer.echo(f"Starting server on http://{host}:{port}...")
     uvicorn.run(server_app, host=host, port=port)
