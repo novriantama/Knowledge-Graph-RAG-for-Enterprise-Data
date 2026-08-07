@@ -71,13 +71,25 @@ class QueryPipelineUseCase:
                     )
                     graph_paths.extend(paths)
 
-        # 3. Vector Path Execution (for VECTOR, HYBRID, or fallback)
+        # 3. Vector Path & Shared Key Bridge Execution
+        if graph_paths:
+            # Cross from graph path chunk_ids back to original text passages via shared chunk_ids
+            graph_chunk_ids = []
+            for p in graph_paths:
+                for k in ("chunks", "chunks1", "chunks2", "chunks_a", "chunks_b"):
+                    if k in p and isinstance(p[k], list):
+                        graph_chunk_ids.extend(p[k])
+            if graph_chunk_ids:
+                cross_passages = self.vector_repo.get_chunks_by_ids(list(set(graph_chunk_ids)))
+                vector_passages.extend(cross_passages)
+
         if route_choice in (RouteChoice.VECTOR, RouteChoice.HYBRID) or not graph_paths:
             query_embedding = self.encoder.encode(query).tolist()
-            vector_passages = self.vector_repo.similarity_search(query_embedding, top_k=5)
+            sim_passages = self.vector_repo.similarity_search(query_embedding, top_k=5)
+            vector_passages.extend(sim_passages)
 
-            if route_choice == RouteChoice.HYBRID and vector_passages:
-                retrieved_chunk_ids = [v.chunk_id for v in vector_passages]
+            if route_choice == RouteChoice.HYBRID and sim_passages:
+                retrieved_chunk_ids = [v.chunk_id for v in sim_passages]
                 extra_graph_paths = self.graph_repo.get_neighborhood_by_chunk_ids(retrieved_chunk_ids)
                 graph_paths.extend(extra_graph_paths)
 
