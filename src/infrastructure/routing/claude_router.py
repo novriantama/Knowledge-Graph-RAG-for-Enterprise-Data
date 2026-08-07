@@ -9,10 +9,24 @@ from src.domain.interfaces import IRouterService
 logger = logging.getLogger(__name__)
 
 class ClaudeRouter(IRouterService):
-    """Cheap, high-performance query router using Claude 3.5 Haiku with few-shot prompting and low-confidence fallback."""
+    """Cheap, high-performance query router using OpenAgentic / Claude API with few-shot prompting and low-confidence fallback."""
 
-    def __init__(self, api_key: Optional[str] = None, confidence_threshold: float = 0.70):
-        self.client = Anthropic(api_key=api_key or os.getenv("ANTHROPIC_API_KEY", "placeholder"))
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+        model: Optional[str] = None,
+        confidence_threshold: float = 0.70
+    ):
+        resolved_api_key = api_key or os.getenv("OPENAGENTIC_API_KEY") or os.getenv("ANTHROPIC_API_KEY", "placeholder")
+        resolved_base_url = base_url or os.getenv("OPENAGENTIC_BASE_URL")
+
+        client_kwargs = {"api_key": resolved_api_key}
+        if resolved_base_url:
+            client_kwargs["base_url"] = resolved_base_url
+
+        self.client = Anthropic(**client_kwargs)
+        self.model = model or os.getenv("OPENAGENTIC_MODEL", "claude-sonnet-4.6")
         self.confidence_threshold = confidence_threshold
 
     def route_query(self, query: str) -> RouterDecision:
@@ -61,7 +75,7 @@ Route: HYBRID | Confidence: 0.92 | Target Entities: ["Acme EU GmbH", "AcmeCloud"
 
         try:
             response = self.client.messages.create(
-                model="claude-3-5-haiku-20241022",
+                model=self.model,
                 max_tokens=512,
                 system=system_instruction,
                 tools=[{
@@ -75,7 +89,6 @@ Route: HYBRID | Confidence: 0.92 | Target Entities: ["Acme EU GmbH", "AcmeCloud"
 
             raw = RouterDecision(**response.content[0].input)
 
-            # Low Confidence Fallback Gate
             if raw.confidence < self.confidence_threshold:
                 logger.info(f"Low confidence ({raw.confidence:.2f} < {self.confidence_threshold}) on query '{query}'. Triggering HYBRID fallback.")
                 return RouterDecision(

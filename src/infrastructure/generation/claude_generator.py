@@ -11,7 +11,7 @@ class _RawAnswerPayload(BaseModel):
     citations: List[str] = Field(description="List of chunk_ids explicitly cited to support the answer")
 
 class ClaudeGenerator(IGeneratorService):
-    """Generates grounded answers by deduplicating dual retrieval sources, converting Cypher paths to natural language, and enforcing citation verification."""
+    """Generates grounded answers using OpenAgentic / Claude API by deduplicating dual retrieval sources and validating citations."""
 
     RELATION_PHRASES: Dict[str, str] = {
         "OWNS": "owns and manages",
@@ -26,8 +26,21 @@ class ClaudeGenerator(IGeneratorService):
         "REQUIRES_AUDIT": "requires audit for"
     }
 
-    def __init__(self, api_key: Optional[str] = None):
-        self.client = Anthropic(api_key=api_key or os.getenv("ANTHROPIC_API_KEY", "placeholder"))
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+        model: Optional[str] = None
+    ):
+        resolved_api_key = api_key or os.getenv("OPENAGENTIC_API_KEY") or os.getenv("ANTHROPIC_API_KEY", "placeholder")
+        resolved_base_url = base_url or os.getenv("OPENAGENTIC_BASE_URL")
+
+        client_kwargs = {"api_key": resolved_api_key}
+        if resolved_base_url:
+            client_kwargs["base_url"] = resolved_base_url
+
+        self.client = Anthropic(**client_kwargs)
+        self.model = model or os.getenv("OPENAGENTIC_MODEL", "claude-sonnet-4.6")
 
     def _phrase(self, rel_type: str) -> str:
         return self.RELATION_PHRASES.get(rel_type, rel_type.lower().replace("_", " "))
@@ -100,7 +113,6 @@ class ClaudeGenerator(IGeneratorService):
         """Deduplicates graph paths and vector passages, assembling context under explicit section labels."""
         serialized_graph, graph_chunk_ids = self.serialize_graph_paths(graph_paths)
 
-        # Vector Passage Deduplication by chunk_id
         seen_passage_ids = set()
         formatted_passages = []
         vector_chunk_ids = set()
@@ -144,7 +156,7 @@ You must provide citations for every claim. Include the matching chunk_id in you
 
         for attempt in range(2):
             response = self.client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model=self.model,
                 max_tokens=1024,
                 tools=[{
                     "name": "submit_grounded_answer",

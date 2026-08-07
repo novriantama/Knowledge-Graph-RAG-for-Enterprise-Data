@@ -12,10 +12,25 @@ from src.domain.interfaces import IExtractorService
 logger = logging.getLogger(__name__)
 
 class ClaudeExtractor(IExtractorService):
-    """Claude 3.5 Sonnet extractor with strict schema validation and auto-retry feedback loop."""
+    """Knowledge Graph Extractor using OpenAgentic / Claude API with strict schema validation and auto-retry loop."""
 
-    def __init__(self, api_key: Optional[str] = None, cache_dir: str = "./cache/extractions", max_retries: int = 3):
-        self.client = Anthropic(api_key=api_key or os.getenv("ANTHROPIC_API_KEY", "placeholder"))
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+        model: Optional[str] = None,
+        cache_dir: str = "./cache/extractions",
+        max_retries: int = 3
+    ):
+        resolved_api_key = api_key or os.getenv("OPENAGENTIC_API_KEY") or os.getenv("ANTHROPIC_API_KEY", "placeholder")
+        resolved_base_url = base_url or os.getenv("OPENAGENTIC_BASE_URL")
+        
+        client_kwargs = {"api_key": resolved_api_key}
+        if resolved_base_url:
+            client_kwargs["base_url"] = resolved_base_url
+
+        self.client = Anthropic(**client_kwargs)
+        self.model = model or os.getenv("OPENAGENTIC_MODEL", "claude-sonnet-4.6")
         self.cache_dir = cache_dir
         self.max_retries = max_retries
         os.makedirs(cache_dir, exist_ok=True)
@@ -27,7 +42,6 @@ class ClaudeExtractor(IExtractorService):
         chunk_hash = self._get_chunk_hash(content)
         cache_path = os.path.join(self.cache_dir, f"{chunk_hash}.json")
 
-        # 1. Check local hash cache first
         if os.path.exists(cache_path):
             try:
                 with open(cache_path, "r", encoding="utf-8") as f:
@@ -36,7 +50,6 @@ class ClaudeExtractor(IExtractorService):
             except Exception as e:
                 logger.warning(f"Cache hit invalid for {chunk_id}, re-extracting: {e}")
 
-        # 2. Prepare extraction prompt
         allowed_entity_types = [e.value for e in EntityType]
         allowed_relation_types = [r.value for r in RelationType]
 
@@ -62,12 +75,11 @@ RULES:
             }
         ]
 
-        # 3. Extraction Retry Loop with Schema Validation
         last_error = None
         for attempt in range(1, self.max_retries + 1):
             try:
                 response = self.client.messages.create(
-                    model="claude-3-5-sonnet-20241022",
+                    model=self.model,
                     max_tokens=2048,
                     system=system_instruction,
                     tools=[{
@@ -82,16 +94,13 @@ RULES:
                 tool_input = response.content[0].input
                 tool_input["chunk_id"] = chunk_id
 
-                # Ensure source_chunk_id is present on all relationships
                 if "relationships" in tool_input and isinstance(tool_input["relationships"], list):
                     for rel in tool_input["relationships"]:
                         if isinstance(rel, dict) and not rel.get("source_chunk_id"):
                             rel["source_chunk_id"] = chunk_id
 
-                # Validate against Pydantic schema
                 result = ChunkExtractionResult(**tool_input)
 
-                # Save valid result to cache
                 with open(cache_path, "w", encoding="utf-8") as f:
                     f.write(result.model_dump_json(indent=2))
 
@@ -101,11 +110,9 @@ RULES:
                 last_error = err
                 logger.warning(f"Extraction attempt {attempt}/{self.max_retries} failed for chunk {chunk_id}: {err}")
                 
-                # Feedback payload for Claude retry
                 feedback = f"SCHEMA VALIDATION ERROR ON ATTEMPT {attempt}: {str(err)}. Please fix field types and ensure all entity_type values match allowed EntityType enums and relation_type matches allowed RelationType enums."
-                messages.append({"role": "assistant", "content": f"Extracted invalid schema."})
+                messages.append({"role": "assistant", "content": "Extracted invalid schema."})
                 messages.append({"role": "user", "content": feedback})
 
-        # Fallback empty extraction result on total failure
         logger.error(f"Extraction failed after {self.max_retries} attempts for {chunk_id}: {last_error}")
         return ChunkExtractionResult(chunk_id=chunk_id, entities=[], relationships=[])
