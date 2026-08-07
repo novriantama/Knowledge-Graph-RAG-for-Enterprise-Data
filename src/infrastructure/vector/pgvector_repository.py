@@ -1,5 +1,6 @@
 import datetime
 import psycopg2
+# pyrefly: ignore [missing-import]
 from pgvector.psycopg2 import register_vector
 from sentence_transformers import SentenceTransformer
 from typing import List, Dict, Any, Optional
@@ -23,13 +24,14 @@ class PgVectorRepository(IVectorRepository):
     def _get_connection(self):
         conn = psycopg2.connect(**self.conn_params)
         conn.autocommit = True
+        with conn.cursor() as cur:
+            cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
         register_vector(conn)
         return conn
 
     def _init_db(self):
         with self._get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS document_chunks (
                         chunk_id VARCHAR(128) PRIMARY KEY,

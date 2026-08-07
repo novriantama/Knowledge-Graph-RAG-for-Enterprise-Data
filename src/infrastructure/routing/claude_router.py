@@ -1,7 +1,9 @@
+import time
 import os
+import json
 import logging
 from typing import Optional
-from anthropic import Anthropic
+from anthropic import Anthropic, RateLimitError
 from src.domain.entities import RouterDecision
 from src.domain.enums import RouteChoice
 from src.domain.interfaces import IRouterService
@@ -18,12 +20,21 @@ class ClaudeRouter(IRouterService):
         model: Optional[str] = None,
         confidence_threshold: float = 0.70
     ):
-        resolved_api_key = api_key or os.getenv("OPENAGENTIC_API_KEY") or os.getenv("ANTHROPIC_API_KEY", "placeholder")
+        env_oa_key = os.getenv("OPENAGENTIC_API_KEY")
+        env_ant_key = os.getenv("ANTHROPIC_API_KEY")
+        if api_key and api_key not in ("placeholder", "placeholder_key", "your_anthropic_api_key_here"):
+            resolved_api_key = api_key
+        else:
+            resolved_api_key = env_oa_key or env_ant_key or "placeholder"
+
         resolved_base_url = base_url or os.getenv("OPENAGENTIC_BASE_URL")
 
         client_kwargs = {"api_key": resolved_api_key}
         if resolved_base_url:
-            client_kwargs["base_url"] = resolved_base_url
+            cleaned_url = resolved_base_url.rstrip("/")
+            if cleaned_url.endswith("/v1"):
+                cleaned_url = cleaned_url[:-3]
+            client_kwargs["base_url"] = cleaned_url
 
         self.client = Anthropic(**client_kwargs)
         self.model = model or os.getenv("OPENAGENTIC_MODEL", "claude-sonnet-4.6")
@@ -87,7 +98,30 @@ Route: HYBRID | Confidence: 0.92 | Target Entities: ["Acme EU GmbH", "AcmeCloud"
                 messages=[{"role": "user", "content": f"Query: {query}"}]
             )
 
-            raw = RouterDecision(**response.content[0].input)
+            tool_input = None
+            for block in response.content:
+                if hasattr(block, "type") and block.type == "tool_use":
+                    tool_input = getattr(block, "input", None)
+                    break
+                elif hasattr(block, "input"):
+                    tool_input = getattr(block, "input", None)
+                    break
+
+            if not tool_input:
+                for block in response.content:
+                    if hasattr(block, "text") and block.text:
+                        try:
+                            parsed = json.loads(block.text)
+                            if isinstance(parsed, dict):
+                                tool_input = parsed
+                                break
+                        except Exception:
+                            pass
+
+            if not tool_input or not isinstance(tool_input, dict):
+                raise ValueError(f"No valid tool_use input found in response blocks: {response.content}")
+
+            raw = RouterDecision(**tool_input)
 
             if raw.confidence < self.confidence_threshold:
                 logger.info(f"Low confidence ({raw.confidence:.2f} < {self.confidence_threshold}) on query '{query}'. Triggering HYBRID fallback.")
@@ -100,6 +134,11 @@ Route: HYBRID | Confidence: 0.92 | Target Entities: ["Acme EU GmbH", "AcmeCloud"
                 )
 
             return raw
+
+        except RateLimitError as rle:
+            logger.warning(f"Router rate limit (429) hit: {rle}. Waiting 2s before retry...")
+            time.sleep(2.0)
+            return self.route_query(query)
 
         except Exception as e:
             logger.error(f"Router exception on query '{query}': {e}. Triggering emergency HYBRID fallback.")

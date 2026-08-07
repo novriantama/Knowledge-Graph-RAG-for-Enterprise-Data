@@ -46,10 +46,10 @@ docker-restart:
 	$(DOCKER_COMPOSE) restart
 
 ingest:
-	python3 scripts/ingest_corpus.py
+	PYTHONPATH=. python3 scripts/ingest_corpus.py
 
 serve:
-	python3 -m src.presentation.cli.main serve
+	PYTHONPATH=. python3 -m src.presentation.cli.main serve
 
 query:
 	@if [ -z "$(Q)" ]; then \
@@ -57,13 +57,13 @@ query:
 		echo "Example: make query Q='Which packages affect EU CRA compliance for Acme EU GmbH?'"; \
 		exit 1; \
 	fi
-	python3 -m src.presentation.cli.main query "$(Q)"
+	PYTHONPATH=. python3 -m src.presentation.cli.main query "$(Q)"
 
 benchmark:
-	python3 -m src.presentation.cli.main benchmark data/benchmark_questions.json
+	PYTHONPATH=. python3 -m src.presentation.cli.main benchmark data/benchmark_questions.json
 
 test:
-	python3 -m unittest discover -s tests/unit
+	PYTHONPATH=. python3 -m unittest discover -s tests/unit
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +

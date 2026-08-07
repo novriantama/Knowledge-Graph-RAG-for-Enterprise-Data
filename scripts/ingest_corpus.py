@@ -67,7 +67,12 @@ def ingest_enterprise_corpus(
 
     print("✓ Budget check passed. Initializing repository clients & extraction engines...\n")
 
-    extractor = ClaudeExtractor(api_key=settings.anthropic_api_key, cache_dir=settings.extraction_cache_dir)
+    extractor = ClaudeExtractor(
+        api_key=settings.openagentic_api_key or settings.anthropic_api_key,
+        base_url=settings.openagentic_base_url,
+        model=settings.openagentic_model,
+        cache_dir=settings.extraction_cache_dir
+    )
     resolver = EntityResolver(similarity_threshold=settings.entity_resolution_threshold)
     graph_repo = Neo4jRepository(uri=settings.neo4j_uri, user=settings.neo4j_user, pass_word=settings.neo4j_password)
     vector_repo = PgVectorRepository(

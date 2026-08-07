@@ -1,3 +1,4 @@
+import time
 import datetime
 from typing import List, Optional
 from src.domain.entities import DocumentChunk, ChunkExtractionResult
@@ -41,6 +42,7 @@ class IngestDocumentUseCase:
             # 1. Extract entities and relationships
             extraction_result = self.extractor.extract_chunk(chunk_id=chunk_id, content=chunk_text)
             results.append(extraction_result)
+            time.sleep(1.0)
 
             # 2. Ingest into Neo4j graph store with entity resolution
             self.graph_repo.save_chunk_extractions(result=extraction_result, resolver=self.resolver)

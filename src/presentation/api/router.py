@@ -18,7 +18,13 @@ from src.application.benchmark_runner import BenchmarkRunnerUseCase
 api_router = APIRouter(prefix="/api/v1", tags=["KG-RAG"])
 
 def get_ingest_use_case():
-    extractor = ClaudeExtractor(api_key=settings.anthropic_api_key, cache_dir=settings.extraction_cache_dir)
+    api_key = settings.openagentic_api_key or settings.anthropic_api_key
+    extractor = ClaudeExtractor(
+        api_key=api_key,
+        base_url=settings.openagentic_base_url,
+        model=settings.openagentic_model,
+        cache_dir=settings.extraction_cache_dir
+    )
     resolver = EntityResolver(similarity_threshold=settings.entity_resolution_threshold)
     graph_repo = Neo4jRepository(uri=settings.neo4j_uri, user=settings.neo4j_user, pass_word=settings.neo4j_password)
     vector_repo = PgVectorRepository(
@@ -31,7 +37,12 @@ def get_ingest_use_case():
     return IngestDocumentUseCase(extractor, resolver, graph_repo, vector_repo)
 
 def get_query_pipeline_use_case():
-    router = ClaudeRouter(api_key=settings.anthropic_api_key)
+    api_key = settings.openagentic_api_key or settings.anthropic_api_key
+    router = ClaudeRouter(
+        api_key=api_key,
+        base_url=settings.openagentic_base_url,
+        model=settings.openagentic_model
+    )
     resolver = EntityResolver(similarity_threshold=settings.entity_resolution_threshold)
     graph_repo = Neo4jRepository(uri=settings.neo4j_uri, user=settings.neo4j_user, pass_word=settings.neo4j_password)
     vector_repo = PgVectorRepository(
@@ -41,7 +52,11 @@ def get_query_pipeline_use_case():
         host=settings.postgres_host,
         port=settings.postgres_port
     )
-    generator = ClaudeGenerator(api_key=settings.anthropic_api_key)
+    generator = ClaudeGenerator(
+        api_key=api_key,
+        base_url=settings.openagentic_base_url,
+        model=settings.openagentic_model
+    )
     return QueryPipelineUseCase(router, graph_repo, vector_repo, generator, resolver)
 
 @api_router.post("/ingest", response_model=IngestResponse)
@@ -79,6 +94,7 @@ def query_pipeline(req: QueryRequest):
 @api_router.post("/benchmark", response_model=BenchmarkResponse)
 def run_benchmark(req: BenchmarkRequest):
     try:
+        api_key = settings.openagentic_api_key or settings.anthropic_api_key
         query_use_case = get_query_pipeline_use_case()
         vector_repo = PgVectorRepository(
             dbname=settings.postgres_db,
@@ -87,7 +103,11 @@ def run_benchmark(req: BenchmarkRequest):
             host=settings.postgres_host,
             port=settings.postgres_port
         )
-        generator = ClaudeGenerator(api_key=settings.anthropic_api_key)
+        generator = ClaudeGenerator(
+            api_key=api_key,
+            base_url=settings.openagentic_base_url,
+            model=settings.openagentic_model
+        )
         benchmark_use_case = BenchmarkRunnerUseCase(query_use_case, vector_repo, generator)
         res = benchmark_use_case.execute_benchmark(req.questions_file_path)
         return BenchmarkResponse(summary_markdown=res["summary_table"])
