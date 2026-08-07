@@ -27,7 +27,7 @@ def query(question: str):
     typer.echo(f"Citations: {answer.citations}")
 
 @app.command()
-def benchmark(benchmark_file: str = "data/benchmark_questions.json"):
+def benchmark(benchmark_file: str = typer.Argument("data/benchmark_questions.json", help="Path to benchmark JSON file")):
     """Run comparative benchmark evaluating Plain Vector RAG vs Hybrid KG-RAG."""
     from src.presentation.api.router import get_query_pipeline_use_case
     from src.infrastructure.vector.pgvector_repository import PgVectorRepository
@@ -35,6 +35,7 @@ def benchmark(benchmark_file: str = "data/benchmark_questions.json"):
     from src.application.benchmark_runner import BenchmarkRunnerUseCase
     from config.settings import settings
 
+    api_key = settings.openagentic_api_key or settings.anthropic_api_key
     query_use_case = get_query_pipeline_use_case()
     vector_repo = PgVectorRepository(
         dbname=settings.postgres_db,
@@ -43,7 +44,11 @@ def benchmark(benchmark_file: str = "data/benchmark_questions.json"):
         host=settings.postgres_host,
         port=settings.postgres_port
     )
-    generator = ClaudeGenerator(api_key=settings.anthropic_api_key)
+    generator = ClaudeGenerator(
+        api_key=api_key,
+        base_url=settings.openagentic_base_url,
+        model=settings.openagentic_model
+    )
     runner = BenchmarkRunnerUseCase(query_use_case, vector_repo, generator)
     
     typer.echo(f"Running benchmark on {benchmark_file}...")

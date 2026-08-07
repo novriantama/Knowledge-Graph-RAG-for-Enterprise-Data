@@ -1,8 +1,9 @@
+import time
 import os
 import json
 import logging
 from typing import List, Dict, Any, Optional, Tuple, Set
-from anthropic import Anthropic
+from anthropic import Anthropic, RateLimitError
 from pydantic import BaseModel, Field
 from src.domain.entities import GroundedAnswer, DocumentChunk
 from src.domain.enums import RouteChoice
@@ -168,19 +169,30 @@ You must provide citations for every claim. Include the matching chunk_id in you
 """
 
         for attempt in range(2):
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=1024,
-                tools=[{
-                    "name": "submit_grounded_answer",
-                    "description": "Submit final answer with validated chunk citations",
-                    "input_schema": _RawAnswerPayload.model_json_schema()
-                }],
-                tool_choice={"type": "tool", "name": "submit_grounded_answer"},
-                messages=[
-                    {"role": "user", "content": f"{context_prompt}\n\nQuestion: {query}"}
-                ]
-            )
+            response = None
+            for rl_attempt in range(1, 4):
+                try:
+                    response = self.client.messages.create(
+                        model=self.model,
+                        max_tokens=1024,
+                        tools=[{
+                            "name": "submit_grounded_answer",
+                            "description": "Submit final answer with validated chunk citations",
+                            "input_schema": _RawAnswerPayload.model_json_schema()
+                        }],
+                        tool_choice={"type": "tool", "name": "submit_grounded_answer"},
+                        messages=[
+                            {"role": "user", "content": f"{context_prompt}\n\nQuestion: {query}"}
+                        ]
+                    )
+                    break
+                except RateLimitError as rle:
+                    wait_sec = rl_attempt * 10
+                    logger.warning(f"Generator rate limit (429) hit. Waiting {wait_sec}s...")
+                    time.sleep(wait_sec)
+
+            if not response:
+                raise RuntimeError("Generator failed due to repeated RateLimitErrors.")
 
             tool_input = None
             for block in response.content:

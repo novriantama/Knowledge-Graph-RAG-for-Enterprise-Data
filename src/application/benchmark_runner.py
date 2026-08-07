@@ -3,6 +3,7 @@ import json
 import logging
 from typing import List, Dict, Any, Tuple
 from tabulate import tabulate
+from anthropic import RateLimitError
 from src.application.query_pipeline import QueryPipelineUseCase
 from src.domain.interfaces import IVectorRepository, IGeneratorService
 from sentence_transformers import SentenceTransformer
@@ -29,14 +30,31 @@ class BenchmarkRunnerUseCase:
         self.encoder = SentenceTransformer('all-MiniLM-L6-v2')
 
     def _run_plain_vector_rag(self, query: str):
-        query_embedding = self.encoder.encode(query).tolist()
-        passages = self.vector_repo.similarity_search(query_embedding, top_k=5)
-        return self.generator.generate_grounded_answer(
-            query=query,
-            graph_paths=[],
-            vector_passages=passages,
-            route_choice="VECTOR"
-        )
+        for attempt in range(1, 4):
+            try:
+                query_embedding = self.encoder.encode(query).tolist()
+                passages = self.vector_repo.similarity_search(query_embedding, top_k=5)
+                return self.generator.generate_grounded_answer(
+                    query=query,
+                    graph_paths=[],
+                    vector_passages=passages,
+                    route_choice="VECTOR"
+                )
+            except RateLimitError as rle:
+                wait_sec = attempt * 10
+                logger.warning(f"Benchmark rate limit (Vector RAG) attempt {attempt}/3. Waiting {wait_sec}s...")
+                time.sleep(wait_sec)
+        raise RuntimeError("Vector RAG rate limit retries exhausted.")
+
+    def _run_kg_rag(self, query: str):
+        for attempt in range(1, 4):
+            try:
+                return self.kg_pipeline.execute(query)
+            except RateLimitError as rle:
+                wait_sec = attempt * 10
+                logger.warning(f"Benchmark rate limit (KG-RAG) attempt {attempt}/3. Waiting {wait_sec}s...")
+                time.sleep(wait_sec)
+        raise RuntimeError("KG-RAG rate limit retries exhausted.")
 
     def _evaluate_answer(self, generated_answer: str, expected_keywords: List[str], category: str) -> bool:
         if not expected_keywords:
@@ -44,7 +62,6 @@ class BenchmarkRunnerUseCase:
         gen_lower = generated_answer.lower()
         if category == "out_of_scope":
             return any(kw.lower() in gen_lower for kw in expected_keywords)
-        # Match at least 50% of expected keywords for multi-keyword queries
         matches = sum(1 for kw in expected_keywords if kw.lower() in gen_lower)
         return (matches / len(expected_keywords)) >= 0.5
 
@@ -53,25 +70,30 @@ class BenchmarkRunnerUseCase:
             questions = json.load(f)
 
         results = []
+        total_q = len(questions)
 
-        for q in questions:
+        for idx, q in enumerate(questions, 1):
             q_id = q.get("id")
             q_text = q["question"]
             category = q.get("category", "single_hop")
             hop_count = q.get("hop_count", 1)
             expected_keywords = q.get("expected_answer_keywords", [])
 
+            logger.info(f"[{idx}/{total_q}] Benchmarking Q{q_id} ({category}): '{q_text}'")
+
             # 1. Plain Vector RAG
             t0 = time.time()
             vec_ans_obj = self._run_plain_vector_rag(q_text)
             vec_latency = time.time() - t0
             vec_correct = self._evaluate_answer(vec_ans_obj.answer, expected_keywords, category)
+            time.sleep(1.5)
 
             # 2. Hybrid KG-RAG
             t0 = time.time()
-            kg_ans_obj = self.kg_pipeline.execute(q_text)
+            kg_ans_obj = self._run_kg_rag(q_text)
             kg_latency = time.time() - t0
             kg_correct = self._evaluate_answer(kg_ans_obj.answer, expected_keywords, category)
+            time.sleep(1.5)
 
             results.append({
                 "id": q_id,
