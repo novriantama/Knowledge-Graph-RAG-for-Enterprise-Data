@@ -12,11 +12,11 @@ from src.domain.interfaces import IGeneratorService
 logger = logging.getLogger(__name__)
 
 class _RawAnswerPayload(BaseModel):
-    answer: str = Field(description="The complete answer to the question")
+    answer: str = Field(description="The concise, complete answer to the question")
     citations: List[str] = Field(description="List of chunk_ids explicitly cited to support the answer")
 
 class ClaudeGenerator(IGeneratorService):
-    """Generates grounded answers using OpenAgentic / Claude API by deduplicating dual retrieval sources and validating citations."""
+    """Generates grounded answers using token-optimized context assembly and citation validation."""
 
     RELATION_PHRASES: Dict[str, str] = {
         "OWNS": "owns and manages",
@@ -54,13 +54,12 @@ class ClaudeGenerator(IGeneratorService):
             client_kwargs["base_url"] = cleaned_url
 
         self.client = Anthropic(**client_kwargs)
-        self.model = model or os.getenv("OPENAGENTIC_MODEL", "claude-sonnet-4.6")
+        self.model = model or os.getenv("OPENAGENTIC_GENERATOR_MODEL", os.getenv("OPENAGENTIC_MODEL", "claude-sonnet-4.6"))
 
     def _phrase(self, rel_type: str) -> str:
         return self.RELATION_PHRASES.get(rel_type, rel_type.lower().replace("_", " "))
 
     def serialize_graph_paths(self, paths: List[Dict[str, Any]]) -> Tuple[str, Set[str]]:
-        """Converts raw Cypher dictionary paths into deduplicated natural language statements and extracts valid chunk IDs."""
         if not paths:
             return "", set()
 
@@ -124,14 +123,18 @@ class ClaudeGenerator(IGeneratorService):
         graph_paths: List[Dict[str, Any]],
         vector_passages: List[DocumentChunk]
     ) -> Tuple[str, Set[str]]:
-        """Deduplicates graph paths and vector passages, assembling context under explicit section labels."""
+        """Deduplicates graph paths and vector passages, pruning redundant passage text if graph facts exist."""
         serialized_graph, graph_chunk_ids = self.serialize_graph_paths(graph_paths)
+
+        # Token Optimization: Limit passages to top 2 if graph facts are present, max 3 otherwise
+        max_passages = 2 if graph_paths else 3
+        passages_to_include = vector_passages[:max_passages]
 
         seen_passage_ids = set()
         formatted_passages = []
         vector_chunk_ids = set()
 
-        for passage in vector_passages:
+        for passage in passages_to_include:
             cid = passage.chunk_id
             if cid in seen_passage_ids:
                 continue
@@ -160,13 +163,11 @@ class ClaudeGenerator(IGeneratorService):
     ) -> GroundedAnswer:
         assembled_context, valid_chunk_ids = self.deduplicate_and_assemble_context(graph_paths, vector_passages)
 
-        context_prompt = f"""You are a precise enterprise assistant. Answer the user question based ONLY on the provided Graph Derived Facts and Vector Text Passages.
+        context_prompt = f"""Answer the question concisely based ONLY on the provided Facts & Passages.
 
 {assembled_context}
 
-CRITICAL REQUIREMENT:
-You must provide citations for every claim. Include the matching chunk_id in your citations list.
-"""
+REQUIREMENT: Include valid chunk_ids in citations for all facts."""
 
         for attempt in range(2):
             response = None
@@ -174,10 +175,10 @@ You must provide citations for every claim. Include the matching chunk_id in you
                 try:
                     response = self.client.messages.create(
                         model=self.model,
-                        max_tokens=1024,
+                        max_tokens=512,
                         tools=[{
                             "name": "submit_grounded_answer",
-                            "description": "Submit final answer with validated chunk citations",
+                            "description": "Submit concise answer with chunk citations",
                             "input_schema": _RawAnswerPayload.model_json_schema()
                         }],
                         tool_choice={"type": "tool", "name": "submit_grounded_answer"},
@@ -229,7 +230,7 @@ You must provide citations for every claim. Include the matching chunk_id in you
                     retrieved_chunk_ids=list(valid_chunk_ids)
                 )
 
-            context_prompt += f"\n\nERROR ON PREVIOUS ATTEMPT: You cited invalid chunk IDs ({invalid_citations}). Only cite valid chunk IDs: {list(valid_chunk_ids)}"
+            context_prompt += f"\n\nERROR: Cited invalid IDs ({invalid_citations}). Only cite: {list(valid_chunk_ids)}"
 
         return GroundedAnswer(
             question=query,

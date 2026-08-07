@@ -22,7 +22,7 @@ def get_ingest_use_case():
     extractor = ClaudeExtractor(
         api_key=api_key,
         base_url=settings.openagentic_base_url,
-        model=settings.openagentic_model,
+        model=settings.openagentic_extractor_model,
         cache_dir=settings.extraction_cache_dir
     )
     resolver = EntityResolver(similarity_threshold=settings.entity_resolution_threshold)
@@ -41,7 +41,7 @@ def get_query_pipeline_use_case():
     router = ClaudeRouter(
         api_key=api_key,
         base_url=settings.openagentic_base_url,
-        model=settings.openagentic_model
+        model=settings.openagentic_router_model
     )
     resolver = EntityResolver(similarity_threshold=settings.entity_resolution_threshold)
     graph_repo = Neo4jRepository(uri=settings.neo4j_uri, user=settings.neo4j_user, pass_word=settings.neo4j_password)
@@ -55,7 +55,7 @@ def get_query_pipeline_use_case():
     generator = ClaudeGenerator(
         api_key=api_key,
         base_url=settings.openagentic_base_url,
-        model=settings.openagentic_model
+        model=settings.openagentic_generator_model
     )
     return QueryPipelineUseCase(router, graph_repo, vector_repo, generator, resolver)
 
