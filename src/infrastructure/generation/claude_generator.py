@@ -175,7 +175,8 @@ REQUIREMENT: Include valid chunk_ids in citations for all facts."""
                 try:
                     response = self.client.messages.create(
                         model=self.model,
-                        max_tokens=512,
+                        max_tokens=384,
+                        temperature=0.0,
                         tools=[{
                             "name": "submit_grounded_answer",
                             "description": "Submit concise answer with chunk citations",

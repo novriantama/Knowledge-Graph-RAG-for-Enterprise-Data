@@ -51,7 +51,7 @@ class TestSecureParameterizedCypherExecution(unittest.TestCase):
         # Assert parameterized Cypher template called safely (zero raw Cypher from model)
         self.mock_graph_repo.execute_cypher_template.assert_called_once_with(
             template_name="shared_dependencies",
-            params={"entity_a": "CANONICAL_USER AUTH SERVICE", "entity_b": "CANONICAL_SUPPLIER-X", "limit": 15}
+            params={"entity_a": "CANONICAL_USER AUTH SERVICE", "entity_b": "CANONICAL_SUPPLIER-X", "limit": 8}
         )
 
 if __name__ == "__main__":
